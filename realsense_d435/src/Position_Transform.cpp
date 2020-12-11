@@ -18,11 +18,9 @@ void Position_Transform::Get_camera_referance() {
     Color_inner=InnerTransformation_Color;
 }
 
-
 Eigen::Vector2f Position_Transform::Get_DepthToColorImg(Eigen::Vector3f Pix_P) {
     Depth_cam = CD_Rotation.inverse() *(Pix_P - CD_Transation);
     Eigen::Vector3f D_m = Depth_inner*Depth_cam;
-//    cout<<"C3:"<<Color_3(2)<<endl;
     Depth_Pix_Transform<< (D_m(0)/Color_cam(2)<(WidthCam-1) ? D_m(0)/Color_cam(2):(WidthCam-1) ) ,(D_m(1)/Color_cam(2)<(HeightCam-1)? D_m(1)/Color_cam(2): (HeightCam-1));//限制坐标宽度不要越界
     return Depth_Pix_Transform;
 }
