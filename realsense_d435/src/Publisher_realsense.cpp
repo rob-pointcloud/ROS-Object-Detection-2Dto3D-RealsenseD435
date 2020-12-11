@@ -18,11 +18,11 @@
 #include "logging.h"
 #include "common.hpp"
 #include "time.h"
-//#include <image_transport/image_transport.h> // 用来发布和订阅图像信息
+//#include <image_transport/image_transport.h> // Used to publish and subscribe image information
 using namespace std;
-Eigen::Matrix<float,3,3> MTR;//相机坐标旋转矩阵
-Eigen::Vector3f V_T;//平移向量T
-Eigen::Matrix<float,3,3> Inner_Transformation_Depth,InnerTransformation_Color;// 相机内参
+Eigen::Matrix<float,3,3> MTR;//Camera coordinate rotation matrix
+Eigen::Vector3f V_T;//Translation vector T
+Eigen::Matrix<float,3,3> Inner_Transformation_Depth,InnerTransformation_Color;// Camera internal parameters
 cv::Mat Depthmate,Dec_mat,color_mat;
 vector<string> classNamesVec;
 const auto window_name= "RGB Image";
@@ -41,8 +41,6 @@ const char* OUTPUT_BLOB_NAME = "prob";
 static Logger gLogger;
 ///////////////////
 static float Data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
-//for (int i = 0; i < 3 * INPUT_H * INPUT_W; i++)
-//    data[i] = 1.0;
 static float prob[BATCH_SIZE * OUTPUT_SIZE];
 IRuntime* runtime;
 ICudaEngine* engine;
@@ -51,21 +49,8 @@ int inputIndex;
 int outputIndex;
 void* buffers[2];
 cudaStream_t stream;
-vector<Objection> ObjectionOfOneMat;//一幅图中的目标
+vector<Objection> ObjectionOfOneMat;//一Goals in the picture
 /////////////////////////////
-//DNN opencv与CV-bridge冲突暂时不可用
-/*Net net;//DNN net
-using namespace cv::dnn;
-const size_t inWidth      = 416;
-const size_t inHeight     = 416;
-const float WHRatio       = inWidth / (float)inHeight;
-const float inScaleFactor = 1/255.f;
-const float meanVal       = 127.5;
-std::vector<String> outNames;
-String yolo_tiny_model ="/home/mzc/code/CLionProjects/DNN435/engine/enetb0-coco_final.weights";//yolov4.weights enetb0-coco_final.weights
-String yolo_tiny_cfg =  "/home/mzc/code/CLionProjects/DNN435/engine/enet-coco.cfg";//yolov4.cfg enet-coco.cfg
- */
-//////////////////////////////////////////////
 class Camera{
 public:
     bool Colorinfo= false;
@@ -93,7 +78,7 @@ public:
         if (Colorinfo)
             return;
         else{
-            ///获取彩色相机内参
+            ///Get color camera internal reference
             std::cout<<"\ncolor intrinsics: "<<endl;
             InnerTransformation_Color<<caminfo.K.at(0),caminfo.K.at(1),caminfo.K.at(2),caminfo.K.at(3),caminfo.K.at(4),caminfo.K.at(5),caminfo.K.at(6),caminfo.K.at(7),caminfo.K.at(8);
             for (int i = 0; i < 3; ++i) {
@@ -109,7 +94,7 @@ public:
         if (Depthinfo)
             return;
         else{
-            ///获取深度相机内参
+            ///Get depth camera internal parameters
             std::cout<<"\ndepth intrinsics: "<<endl;
             Inner_Transformation_Depth<<caminfo.K.at(0),caminfo.K.at(1),caminfo.K.at(2),caminfo.K.at(3),caminfo.K.at(4),caminfo.K.at(5),caminfo.K.at(6),caminfo.K.at(7),caminfo.K.at(8);
             for (int i = 0; i < 3; ++i) {
@@ -125,13 +110,11 @@ public:
         cv_bridge::CvImagePtr cv_ptr;
         cv_ptr = cv_bridge::toCvCopy(msg, "bgr8");
         color_mat=cv_ptr->image;
-//        cv::imshow(window_name, color_mat);
-//        cv::waitKey(30);
-//        Mat color(msg->height,msg->width,CV_8UC3,cv_ptr->image.data,Mat::AUTO_STEP);
+
         /////////////////////////////////////
-        ObjectionOfOneMat.clear();//清空上一幅图像的目标
+        ObjectionOfOneMat.clear();//Clear the target of the previous image
         auto Timeofimg=this_head.stamp.toSec()-msg->header.stamp.toSec();
-        if (std::abs(Timeofimg)<=0.01)//时间戳同步
+        if (std::abs(Timeofimg)<=0.01)//Timestamp synchronization
             Dec_mat = Dection(color_mat);
         sensor_msgs::ImagePtr img=cv_bridge::CvImage(std_msgs::Header(),"bgr8",Dec_mat).toImageMsg();
         img->header.stamp=ros::Time::now();
@@ -165,13 +148,11 @@ public:
             }
             Objections.objectionsofonemat.push_back(objection_new);
         }
-//        sensor_msgs::ImagePtr msg=cv_bridge::CvImage(std_msgs::Header(), "bgr8", Dec_mat).toImageMsg();
-//        Objection_img.publish(msg);
         pcl::toROSMsg(cloud,Objections.pointcloud);
         Objections.pointcloud.header.stamp=ros::Time::now();
         Objections.pointcloud.header.frame_id="objects";
         Objections.sizeofobjections=ObjectionOfOneMat.size();
-        Object_pub.publish(Objections);//发布信息--一幅图像的信息
+        Object_pub.publish(Objections);//Post information-information about an image
 //        if (cv::waitKey(1) != 27)
 //            imshow(window_name, Dec_mat);
         Objections.objectionsofonemat.clear();
@@ -182,16 +163,13 @@ public:
         cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_16UC1);
         Depthmate=cv_ptr->image;
         this_head=msg->header;
-//        cout<<Depthmate.at<uint16_t>(240,320)<<endl;
-//     cv::imshow("depth", Depthmate);
-//     cv::waitKey(30);
 
     }
     void depth_to_colorcallback(const realsense2_camera::Extrinsics &extrin) {
         if (Convertinfo)
             return;
         else{
-            ///获取深度相机相对于彩色相机的外参，即变换矩阵: P_color = R * P_depth + T
+            ///Obtain the external parameters of the depth camera relative to the color camera, namely the transformation matrix: P_color = R * P_depth + T
             std::cout<<"\nextrinsics of depth camera to color camera: \nrotaion: "<<std::endl;
             MTR<<extrin.rotation[0],extrin.rotation[1],extrin.rotation[2],extrin.rotation[3],extrin.rotation[4],extrin.rotation[5],extrin.rotation[6],extrin.rotation[7],extrin.rotation[8];
             for(int i = 0; i < 3; ++i){
@@ -263,11 +241,8 @@ public:
     }
 };
 
-
-
 int main(int argc, char** argv)
 {
-//    image_detection_Cfg();//DNN二维目标检测初始化
 //////////////TensorRT//////////////////
     cudaSetDevice(DEVICE);
     std::vector<std::string> file_names;
@@ -295,10 +270,12 @@ int main(int argc, char** argv)
             classNamesVec.push_back(className);
     }
     // prepare input data ---------------------------
+    // create tensorRT runtime object
     runtime = createInferRuntime(gLogger);
     assert(runtime != nullptr)  ;
     engine = runtime->deserializeCudaEngine(trtModelStream, size);
     assert(engine != nullptr);
+    // start performing inference with TensorRT
     context = engine->createExecutionContext();
     assert(context != nullptr);
     delete[] trtModelStream;
@@ -314,7 +291,7 @@ int main(int argc, char** argv)
     CHECK(cudaMalloc(&buffers[outputIndex], BATCH_SIZE * OUTPUT_SIZE * sizeof(float)));
     // Create stream
     CHECK(cudaStreamCreate(&stream));
-    //////////////TensorRT载入模型////////////////////
+    //////////////TensorRTLoad model////////////////////
     ros::init(argc,argv,"realsense_Objection");
     ///////////////
     Camera CA;
@@ -331,76 +308,3 @@ int main(int argc, char** argv)
     return 0;
 
 }
-//////////////////////////Opencv 版本冲突 暂时无法使用DNN
-/*
-void image_detection_Cfg() {
-    net = readNetFromDarknet(yolo_tiny_cfg, yolo_tiny_model);
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);// DNN_BACKEND_INFERENCE_ENGINE DNN_BACKEND_OPENCV 未安装IE库 if you have IntelCore CPU you can chose this Para to accelerate youe model--Openvino;
-    net.setPreferableTarget(DNN_TARGET_CPU);
-    outNames = net.getUnconnectedOutLayersNames();
-    for (int i = 0; i < outNames.size(); i++) {
-        printf("output layer name : %s\n", outNames[i].c_str());
-    }
-    ifstream classNamesFile(classname_path);
-    if (classNamesFile.is_open())
-    {
-        string className = "";
-        while (std::getline(classNamesFile, className))
-            classNamesVec.push_back(className);
-    }
-}
-Mat Dectection(Mat &color_mat) {  //getWindowProperty(window_name, WND_PROP_AUTOSIZE) >= 0
-    // 加载图像 D435加载
-//        cout<<color_mat.type()<<endl;
-    Mat inputBlob = blobFromImage(color_mat, inScaleFactor, Size(inWidth, inHeight), Scalar(), true, false);
-    net.setInput(inputBlob);
-    // 检测
-    std::vector<Mat> outs;
-    net.forward(outs, outNames);
-    vector<double> layersTimings;
-    double freq = getTickFrequency() / 1000;
-    double time = net.getPerfProfile(layersTimings) / freq;
-    double FPS=1000/time;
-    ostringstream ss;
-    ss << "FPS: " << FPS ;
-    putText(color_mat, ss.str(), Point(0, 10), 0, 0.5, Scalar(255, 0, 0));
-    vector<Rect> boxes;
-    vector<int> classIds;
-    vector<float> confidences;
-    for (size_t i = 0; i < outs.size(); ++i) {
-        float *data = (float *) outs[i].data;
-        for (int j = 0; j < outs[i].rows; ++j, data += outs[i].cols) {
-            Mat scores = outs[i].row(j).colRange(5, outs[i].cols);
-            Point classIdPoint;
-            double confidence;
-            minMaxLoc(scores, 0, &confidence, 0, &classIdPoint);
-            if (confidence > 0.5) {
-                int centerX = (int) (data[0] * color_mat.cols);
-                int centerY = (int) (data[1] * color_mat.rows);
-                int width = (int) (data[2] * color_mat.cols);
-                int height = (int) (data[3] * color_mat.rows);
-                int left = centerX - width / 2;
-                int top = centerY - height / 2;
-                classIds.push_back(classIdPoint.x);
-                confidences.push_back((float) confidence);
-                boxes.push_back(Rect(left, top, width, height));
-            }
-        }
-    }
-
-    vector<int> indices;
-    NMSBoxes(boxes, confidences, 0.5, 0.2, indices);
-    for (size_t i = 0; i < indices.size(); ++i) {
-        int idx = indices[i];
-        Rect box = boxes[idx];
-        auto ClassID=classIds[idx];
-        String className = classNamesVec[classIds[idx]];
-        Objection NewObjection(box,ClassID);
-        ObjectionOfOneMat.push_back(NewObjection);
-        putText(color_mat, className.c_str(), box.tl(), FONT_HERSHEY_SIMPLEX, 1.0, Scalar(255, 0, 0), 2, 8);
-        rectangle(color_mat, box, Scalar(0, 0, 255), 2, 8, 0);
-    }
-    return color_mat;
-}
-*/
-/////////////////////////////////////////////////

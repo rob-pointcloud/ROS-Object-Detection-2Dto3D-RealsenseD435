@@ -46,9 +46,6 @@ void Objection::CheckStartPoint() {
    ////
 }
 void Objection::Transform_ImgtoCam() {
-//    Position_Transform Objection_center(Point_img,true);
-//    Point_Camera=Objection_center.Report_PCL();
-//    if(Point_Camera.at(2)<=200||Point_Camera.at(2)>=6000)
     if (Real_Point.size()>0)
        Enable= true;
     else Enable= false;
@@ -71,19 +68,6 @@ float Objection::Get_Area_Depth(cv::Rect Box) {
             break;
         }
     }
-    ///////////////////////////////平均池化
-//    std::array<int,Stride*2> Value;
-//    int sub=0;
-//    for (int i = 0; i < Stride*2; ++i) {
-//        Value.at(i)=Arr_Box.at(Stride*Stride/2-Stride+1+i);
-//        if (Value.at(i)==0)
-//            sub++;//剔除无效的点
-//    }
-//    result=std::accumulate(Value.begin(),Value.end(),0.0);
-//    if (result<200)
-//        result=0;
-//    else
-//        result=result/(Value.size()-sub);
     /////////////////////////////////////
     return result  ;
 }
@@ -109,12 +93,6 @@ void Objection::DealRect() {
             auto IP=Position_Transform(Sparse_Point, false).Report_PCL();
             Objection_PCL.push_back(IP);
             width++;
-//                sample_type m;
-//                m(0)=IP.at(0);
-//                m(1)=IP.at(1);
-//                m(2)=IP.at(2);
-//                samples.push_back(m);
-//            }
         }
     }
 //    int Long=Objection_PCL.size();
@@ -126,73 +104,5 @@ clock_t StartTime,EndTime;
     auto Time=(double)(EndTime - StartTime) / CLOCKS_PER_SEC;
     Point_Camera=This_Algorithm.Center_Point;
     Real_Point=This_Algorithm.Objection_3D;
-    //////Dlib 库KK-mean 聚类 失效
-//    dlib::kcentroid<kernel_type> kc(kernel_type(0.1),0.5,samples.size()/2);
-//    dlib::kkmeans<kernel_type> test(kc);
-//    test.set_number_of_centers(2);
-//    dlib::pick_initial_centers(2, initial_centers, samples, test.get_kernel());
-//    test.train(samples,initial_centers);
-//    int sum0=0,sum1=0,sum2=0,num=0;
-//    for(auto i : samples){
-//        array<int ,3> new_point;
-//        if(test(i)==0) {
-//            new_point.at(0)=i(0);
-//            new_point.at(1)=i(1);
-//            new_point.at(2)=i(2);
-//            Real_Point.push_back(new_point);
-//            cout<<samples.size()<<":i"<<num<<":"<<i(0)<<" "<<i(1)<<" "<<i(2)<<endl;
-//            sum0+=new_point.at(0);
-//            sum1+=new_point.at(1);
-//            sum2+=new_point.at(2);
-//            num++;
-//        }
-//    }
-//    cout<<samples.size()<<":i"<<num<<endl;
-///////////Test//////////////////////////////////
-//    cout<<Classname<<":"<<Objection_PCL.size()<<endl;
-//    for (int i = 0; i < Objection_PCL.size(); ++i) {
-//        cout<<"opt"<<Objection_PCL[i].at(0)<<" "<<Objection_PCL[i].at(1)<<" "<<Objection_PCL[i].at(2)<<";";
-//        cout<<Objection_DepthPoint[i].at(0)<<" "<<Objection_DepthPoint[i].at(1)<<";"<<endl;
-//    }
-///////////////////
-//    cout<<samples[1]<<"index1"<<endl;
-//    auto num0=test.get_kcentroid(0).dictionary_size();
-//    auto num1=test.get_kcentroid(1).dictionary_size();
-//    auto num2=test.get_kcentroid(2).dictionary_size();
-//    Point_Camera.at(0)=sum0/num;
-//    Point_Camera.at(1)=sum1/num;
-//    Point_Camera.at(2)=sum2/num;
-    ///连通区域算法 效果不好 舍弃
-//    auto P0=test.get_kcentroid(0).get_kernel();
-//    auto P1=test.get_kcentroid(1).get_kernel();
-//    Mat Obj_ZO,OSD;
-//    Object_Sparse_Depth.convertTo(OSD,CV_8U);
-//    threshold(OSD, Obj_ZO,0, 255, THRESH_OTSU);
-//    auto Num_Obj = connectedComponentsWithStats(Obj_ZO,labels,Stats,centroids,8,CV_16U);
-//    cout<<"Object_Area_num=="<<Num_Obj<<endl;
-//    Mat Object_Area=color_mat(Aera_Objection);//截取目标范围的彩色
-//    cv::cvtColor(Object_Area,Object_Area,COLOR_BGR2GRAY);
-//    Object_Area.convertTo(Object_Area,CV_8U);
-//    auto Num_Obj = connectedComponentsWithStats(Object_Area,labels,Stats,centroids,8,CV_16U);
-//    if (Num_Obj==2){//正常状态 仅仅检测到一个连通区域 为检测目标
-//        int sum_row=0,sum_col=0,sum_number=0;
-//        for (int i = 0; i < labels.rows; ++i) {
-//            for (int j = 0; j < labels.cols; ++j) {
-//                if (labels.at<uchar>(i,j)==1)
-//                {
-//                    sum_row+=i;
-//                    sum_col+=j;
-//                    sum_number++;
-//                }
-//            }
-//        }
-//        Point_img.at(1)=sum_col/sum_number+Aera_Objection.x;
-//        Point_img.at(0)=sum_row/sum_number+Aera_Objection.y;
-//        Enable= true;
-//        cout<<Stats.at<int>(1,CC_STAT_AREA)<<" "<<labels.rows*labels.cols<<endl;
-//    } else{
-//       cout<<"Error Object_num::"<<Num_Obj<<endl;
-//       Enable= false;
-//    }
 
 }

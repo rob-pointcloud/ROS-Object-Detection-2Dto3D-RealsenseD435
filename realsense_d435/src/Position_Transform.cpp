@@ -51,8 +51,6 @@ Position_Transform::Position_Transform(std::array<int,2> Pix,bool flag) {
     }
     else{
         Depth_Pix=Pix;
-//        Depth_Pix.at(0)=Pix.at(0)<(WidthCam-1) ? Pix.at(0):(WidthCam-1) ;// false means Depth_Pix
-//        Depth_Pix.at(1)=Pix.at(1)<(HeightCam-1) ? Pix.at(1):(HeightCam-1) ;// false means Depth_Pix
     }
     Get_camera_referance();//初始化相机参数 初始化深度图Depthmate
 }
