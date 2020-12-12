@@ -18,7 +18,7 @@
 #include "logging.h"
 #include "common.hpp"
 #include "time.h"
-//#include <image_transport/image_transport.h> // Used to publish and subscribe image information
+
 using namespace std;
 Eigen::Matrix<float,3,3> MTR;//Camera coordinate rotation matrix
 Eigen::Vector3f V_T;//Translation vector T
@@ -153,8 +153,6 @@ public:
         Objections.pointcloud.header.frame_id="objects";
         Objections.sizeofobjections=ObjectionOfOneMat.size();
         Object_pub.publish(Objections);//Post information-information about an image
-//        if (cv::waitKey(1) != 27)
-//            imshow(window_name, Dec_mat);
         Objections.objectionsofonemat.clear();
         /////////////////////////////////
     }
@@ -216,7 +214,6 @@ public:
         auto start = std::chrono::system_clock::now();
         doInference(*context, stream, buffers, Data, prob, BATCH_SIZE);
         auto end = std::chrono::system_clock::now();
-//        std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
         std::vector<std::vector<Yolo::Detection>> batch_res(fcount);
         for (int b = 0; b < fcount; b++) {
             auto& res = batch_res[b];
